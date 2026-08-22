@@ -1,11 +1,12 @@
 package com.example.repositories
 
 import com.example.models.Book
-import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 class BookRepository {
     private val books = ConcurrentHashMap<String, Book>()
+    private val idCounter = AtomicInteger(1)
 
     fun getAll(
         query: String? = null,
@@ -21,7 +22,7 @@ class BookRepository {
             val matchAvailability = isAvailable == null || book.isAvailable == isAvailable
 
             matchQuery && matchAuthor && matchAvailability
-        }.sortedBy { it.id }
+        }.sortedBy { it.id.toIntOrNull() ?: Int.MAX_VALUE }
     }
 
     fun getById(id: String): Book? {
@@ -29,7 +30,7 @@ class BookRepository {
     }
 
     fun add(title: String, author: String): Book {
-        val id = UUID.randomUUID().toString().take(8)
+        val id = idCounter.getAndIncrement().toString()
         val book = Book(
             id = id,
             title = title,
@@ -39,6 +40,7 @@ class BookRepository {
         books[id] = book
         return book
     }
+
 
     fun addWithId(id: String, title: String, author: String, isAvailable: Boolean = true): Book {
         val book = Book(
@@ -79,5 +81,7 @@ class BookRepository {
 
     fun clear() {
         books.clear()
+        idCounter.set(1)
     }
 }
+

@@ -1,6 +1,5 @@
 package com.example.routes
 
-import com.example.models.BorrowRequest
 import com.example.models.CreateBookRequest
 import com.example.models.MessageResponse
 import com.example.models.UpdateBookRequest
@@ -11,6 +10,7 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+
 
 fun Route.bookRoutes(
     bookRepository: BookRepository,
@@ -123,29 +123,15 @@ fun Route.bookRoutes(
                 MessageResponse("Missing or invalid book ID")
             )
 
-            val request = try {
-                call.receive<BorrowRequest>()
-            } catch (e: Exception) {
-                return@post call.respond(
-                    HttpStatusCode.BadRequest,
-                    MessageResponse("Invalid request body. 'borrowerName' is required.")
-                )
-            }
-
-            if (request.borrowerName.isBlank()) {
-                return@post call.respond(
-                    HttpStatusCode.BadRequest,
-                    MessageResponse("Borrower name must not be blank")
-                )
-            }
-
-            when (val result = lendingRepository.borrowBook(id, request.borrowerName.trim(), bookRepository)) {
+            when (val result = lendingRepository.borrowBook(id, bookRepository)) {
                 is LendingResult.Success -> call.respond(HttpStatusCode.OK, result.record)
                 is LendingResult.BookNotFound -> call.respond(HttpStatusCode.NotFound, MessageResponse(result.message))
                 is LendingResult.BookNotAvailable -> call.respond(HttpStatusCode.Conflict, MessageResponse(result.message))
                 is LendingResult.BookNotBorrowed -> call.respond(HttpStatusCode.BadRequest, MessageResponse(result.message))
             }
         }
+
+
 
         // POST /api/books/{id}/return
         post("{id}/return") {

@@ -44,24 +44,26 @@ fun Route.lendingRoutes(
             } catch (e: Exception) {
                 return@post call.respond(
                     HttpStatusCode.BadRequest,
-                    MessageResponse("Invalid request body. 'bookId' and 'borrowerName' are required.")
+                    MessageResponse("Invalid request body. 'bookId' is required.")
                 )
             }
 
-            if (request.bookId.isBlank() || request.borrowerName.isBlank()) {
+            if (request.bookId.isBlank()) {
                 return@post call.respond(
                     HttpStatusCode.BadRequest,
-                    MessageResponse("Book ID and borrower name must not be blank")
+                    MessageResponse("Book ID must not be blank")
                 )
             }
 
-            when (val result = lendingRepository.borrowBook(request.bookId.trim(), request.borrowerName.trim(), bookRepository)) {
+            when (val result = lendingRepository.borrowBook(request.bookId.trim(), bookRepository)) {
                 is LendingResult.Success -> call.respond(HttpStatusCode.OK, result.record)
                 is LendingResult.BookNotFound -> call.respond(HttpStatusCode.NotFound, MessageResponse(result.message))
                 is LendingResult.BookNotAvailable -> call.respond(HttpStatusCode.Conflict, MessageResponse(result.message))
                 is LendingResult.BookNotBorrowed -> call.respond(HttpStatusCode.BadRequest, MessageResponse(result.message))
             }
         }
+
+
 
         // POST /api/lendings/return (by bookId)
         post("return") {

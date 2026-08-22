@@ -158,15 +158,11 @@ class ServerTest {
             }
         }
 
-        // 1. Borrow book by ID
-        val borrowResponse = testClient.post("/api/books/${book.id}/borrow") {
-            contentType(ContentType.Application.Json)
-            setBody(BorrowRequest(borrowerName = "Alice"))
-        }
+        // 1. Borrow book by ID (no body needed)
+        val borrowResponse = testClient.post("/api/books/${book.id}/borrow")
         assertEquals(HttpStatusCode.OK, borrowResponse.status)
         val lendingRecord = borrowResponse.body<LendingRecord>()
         assertEquals(book.id, lendingRecord.bookId)
-        assertEquals("Alice", lendingRecord.borrowerName)
         assertNotNull(lendingRecord.checkoutDate)
         assertNull(lendingRecord.returnDate)
 
@@ -176,10 +172,7 @@ class ServerTest {
         assertFalse(updatedBook.isAvailable)
 
         // 3. Attempting to borrow again should fail (409 Conflict)
-        val secondBorrowResponse = testClient.post("/api/books/${book.id}/borrow") {
-            contentType(ContentType.Application.Json)
-            setBody(BorrowRequest(borrowerName = "Bob"))
-        }
+        val secondBorrowResponse = testClient.post("/api/books/${book.id}/borrow")
         assertEquals(HttpStatusCode.Conflict, secondBorrowResponse.status)
     }
 
@@ -201,17 +194,13 @@ class ServerTest {
         }
 
         // 1. Borrow book
-        testClient.post("/api/books/${book.id}/borrow") {
-            contentType(ContentType.Application.Json)
-            setBody(BorrowRequest(borrowerName = "Charlie"))
-        }
+        testClient.post("/api/books/${book.id}/borrow")
 
         // 2. Return book
         val returnResponse = testClient.post("/api/books/${book.id}/return")
         assertEquals(HttpStatusCode.OK, returnResponse.status)
         val returnedRecord = returnResponse.body<LendingRecord>()
         assertEquals(book.id, returnedRecord.bookId)
-        assertEquals("Charlie", returnedRecord.borrowerName)
         assertNotNull(returnedRecord.returnDate)
 
         // 3. Verify book status changed back to isAvailable = true
@@ -244,7 +233,7 @@ class ServerTest {
         // Borrow via /api/lendings/borrow
         val borrowResponse = testClient.post("/api/lendings/borrow") {
             contentType(ContentType.Application.Json)
-            setBody(BorrowByBookIdRequest(bookId = book.id, borrowerName = "David"))
+            setBody(BorrowByBookIdRequest(bookId = book.id))
         }
         assertEquals(HttpStatusCode.OK, borrowResponse.status)
 
@@ -253,7 +242,7 @@ class ServerTest {
         assertEquals(HttpStatusCode.OK, historyResponse.status)
         val history = historyResponse.body<List<LendingRecord>>()
         assertEquals(1, history.size)
-        assertEquals("David", history[0].borrowerName)
+        assertEquals(book.id, history[0].bookId)
 
         // Return via /api/lendings/return
         val returnResponse = testClient.post("/api/lendings/return") {
@@ -281,10 +270,7 @@ class ServerTest {
             }
         }
 
-        val response = testClient.post("/api/books/non-existent-id/borrow") {
-            contentType(ContentType.Application.Json)
-            setBody(BorrowRequest(borrowerName = "Eve"))
-        }
+        val response = testClient.post("/api/books/non-existent-id/borrow")
         assertEquals(HttpStatusCode.NotFound, response.status)
     }
 }

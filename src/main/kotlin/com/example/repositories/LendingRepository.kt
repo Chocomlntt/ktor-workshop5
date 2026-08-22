@@ -2,8 +2,8 @@ package com.example.repositories
 
 import com.example.models.LendingRecord
 import java.time.Instant
-import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 sealed class LendingResult {
     data class Success(val record: LendingRecord) : LendingResult()
@@ -14,11 +14,11 @@ sealed class LendingResult {
 
 class LendingRepository {
     private val records = ConcurrentHashMap<String, LendingRecord>()
+    private val idCounter = AtomicInteger(1)
     private val lock = Any()
 
     fun borrowBook(
         bookId: String,
-        borrowerName: String,
         bookRepository: BookRepository
     ): LendingResult = synchronized(lock) {
         val book = bookRepository.getById(bookId)
@@ -28,12 +28,11 @@ class LendingRepository {
             return LendingResult.BookNotAvailable("Book '${book.title}' (ID: $bookId) is currently borrowed.")
         }
 
-        val recordId = UUID.randomUUID().toString().take(8)
+        val recordId = idCounter.getAndIncrement().toString()
         val now = Instant.now().toString()
         val record = LendingRecord(
             id = recordId,
             bookId = bookId,
-            borrowerName = borrowerName,
             checkoutDate = now,
             returnDate = null
         )
@@ -42,6 +41,7 @@ class LendingRepository {
         bookRepository.setAvailability(bookId, false)
         return LendingResult.Success(record)
     }
+
 
     fun returnBook(
         bookId: String,
@@ -75,5 +75,7 @@ class LendingRepository {
 
     fun clear() {
         records.clear()
+        idCounter.set(1)
     }
 }
+
